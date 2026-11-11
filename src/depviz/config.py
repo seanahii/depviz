@@ -26,7 +26,7 @@ class Config:
     repo: str
     mode: str = MODE_REAL
     version: str | None = None
-    filter: str | None = None
+    substring: str | None = None
 
     @property
     def is_test(self):
@@ -40,7 +40,7 @@ class Config:
             ("repo", self.repo),
             ("mode", self.mode),
             ("version", self.version or ""),
-            ("filter", self.filter or ""),
+            ("filter", self.substring or ""),
         ]
 
 

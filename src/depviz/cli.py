@@ -4,7 +4,8 @@ import sys
 
 from depviz.config import MODE_REAL, make_config
 from depviz.errors import DepvizError
-from depviz.pypi import direct_requirements
+from depviz.graph import build_graph, format_graph, make_filter
+from depviz.sources import make_source, root_name
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -37,17 +38,23 @@ def config_from_args(args):
                        args.pkg_version, args.substring)
 
 
-def print_direct(config):
-    """Выводит прямые зависимости пакета из реального репозитория."""
-    if config.is_test:
-        raise DepvizError("тестовый режим пока не поддерживается")
-    version, requirements = direct_requirements(
-        config.repo, config.package, config.version)
-    print(f"Прямые зависимости {config.package}=={version}:")
-    for requirement in requirements:
-        print(f"  {requirement}")
-    if not requirements:
-        print("  (нет зависимостей)")
+def analyze(config):
+    """Строит граф зависимостей корневого пакета с учётом фильтра."""
+    excluded = make_filter(config.substring)
+    root = root_name(config)
+    if excluded(root):
+        raise DepvizError(f"корневой пакет '{root}' исключён фильтром "
+                          f"'{config.substring}'")
+    source = make_source(config)
+    graph = build_graph(root, source.dependencies, excluded)
+    return graph, source
+
+
+def report_missing(source):
+    """Сообщает о пакетах, для которых не найдено описание."""
+    if source.missing:
+        print("Не найдены в репозитории (считаются без зависимостей): "
+              + ", ".join(source.missing))
 
 
 def main(argv=None):
@@ -55,7 +62,9 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         config = config_from_args(args)
-        print_direct(config)
+        graph, source = analyze(config)
+        print(format_graph(graph, source.versions))
+        report_missing(source)
     except DepvizError as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         return EXIT_ERROR
