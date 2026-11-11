@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Сборка
+build/
+dist/
+
+# Результаты работы программы
+out/
+*.svg
+*.png
+
+# Редакторы и ОС
+.idea/
+.vscode/
+*.swp
+.DS_Store
