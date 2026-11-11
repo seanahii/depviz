@@ -90,3 +90,40 @@ def format_graph(graph, versions=None):
         lines.append("Циклические зависимости:")
         lines.extend(f"  {' -> '.join(cycle)}" for cycle in graph.cycles)
     return "\n".join(lines)
+
+
+def invert(edges):
+    """Обращает словарь смежности: для каждого пакета — кто от него
+    зависит."""
+    reverse = {node: [] for node in edges}
+    for node, deps in edges.items():
+        for dep in deps:
+            reverse.setdefault(dep, []).append(node)
+    return reverse
+
+
+def reverse_dependencies(target, edges, is_excluded=None):
+    """Строит граф обратных зависимостей пакета ``target``.
+
+    Используется тот же обход в глубину без рекурсии (``build_graph``),
+    но по обращённому графу: вершины результата — пакеты, которые прямо
+    или транзитивно зависят от ``target``.
+    """
+    reverse = invert(edges)
+    return build_graph(target, lambda name: reverse.get(name, []),
+                       is_excluded)
+
+
+def format_reverse(graph):
+    """Возвращает текстовое представление обратных зависимостей."""
+    dependents = [node for node in graph.edges if node != graph.root]
+    lines = [f"Обратные зависимости {graph.root} "
+             f"(пакетов, зависящих от него: {len(dependents)}):",
+             f"  {', '.join(dependents) or '(нет)'}",
+             "Связи (X <- Y: Y зависит от X):"]
+    for node, users in graph.edges.items():
+        lines.append(f"  {node} <- {', '.join(users) or '(нет)'}")
+    if graph.cycles:
+        lines.append("Циклические зависимости:")
+        lines.extend(f"  {' <- '.join(cycle)}" for cycle in graph.cycles)
+    return "\n".join(lines)

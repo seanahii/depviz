@@ -4,7 +4,8 @@ import sys
 
 from depviz.config import MODE_REAL, make_config
 from depviz.errors import DepvizError
-from depviz.graph import build_graph, format_graph, make_filter
+from depviz.graph import (build_graph, format_graph, format_reverse,
+                          make_filter, reverse_dependencies)
 from depviz.sources import make_source, root_name
 
 EXIT_OK = 0
@@ -29,6 +30,9 @@ def build_parser():
                         metavar="SUBSTRING",
                         help="исключить пакеты, имя которых содержит "
                              "подстроку")
+    parser.add_argument("--reverse", action="store_true",
+                        help="вывести обратные зависимости пакета "
+                             "(только для режима test)")
     return parser
 
 
@@ -50,6 +54,30 @@ def analyze(config):
     return graph, source
 
 
+def analyze_reverse(config):
+    """Строит граф обратных зависимостей в тестовом репозитории."""
+    if not config.is_test:
+        raise DepvizError("обратные зависимости поддерживаются только в "
+                          "режиме test: PyPI не предоставляет список "
+                          "пакетов, зависящих от данного")
+    excluded = make_filter(config.substring)
+    if excluded(config.package):
+        raise DepvizError(f"пакет '{config.package}' исключён фильтром")
+    edges = make_source(config).graph
+    known = set(edges).union(*edges.values())
+    if config.package not in known:
+        raise DepvizError(f"пакет '{config.package}' не найден в "
+                          f"тестовом репозитории")
+    return reverse_dependencies(config.package, edges, excluded)
+
+
+def run_forward(config):
+    """Строит и выводит граф прямых зависимостей."""
+    graph, source = analyze(config)
+    print(format_graph(graph, source.versions))
+    report_missing(source)
+
+
 def report_missing(source):
     """Сообщает о пакетах, для которых не найдено описание."""
     if source.missing:
@@ -62,9 +90,10 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         config = config_from_args(args)
-        graph, source = analyze(config)
-        print(format_graph(graph, source.versions))
-        report_missing(source)
+        if args.reverse:
+            print(format_reverse(analyze_reverse(config)))
+        else:
+            run_forward(config)
     except DepvizError as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         return EXIT_ERROR
