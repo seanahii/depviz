@@ -1,9 +1,12 @@
 PYTHON ?= python3
 
-.PHONY: test run clean
+.PHONY: test run demo clean
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
+
+demo:
+	./demo.sh
 
 run:
 	./run.sh $(ARGS)

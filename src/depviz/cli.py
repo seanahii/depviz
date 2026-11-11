@@ -2,6 +2,7 @@
 import argparse
 import sys
 
+from depviz import d2
 from depviz.config import MODE_REAL, make_config
 from depviz.errors import DepvizError
 from depviz.graph import (build_graph, format_graph, format_reverse,
@@ -10,6 +11,7 @@ from depviz.sources import make_source, root_name
 
 EXIT_OK = 0
 EXIT_ERROR = 1
+DEFAULT_OUT_DIR = "out"
 
 
 def build_parser():
@@ -33,6 +35,11 @@ def build_parser():
     parser.add_argument("--reverse", action="store_true",
                         help="вывести обратные зависимости пакета "
                              "(только для режима test)")
+    parser.add_argument("--d2", metavar="FILE",
+                        help="сохранить граф на языке D2 в файл")
+    parser.add_argument("--show", action="store_true",
+                        help="построить изображение графа (SVG) и "
+                             "открыть его")
     return parser
 
 
@@ -76,6 +83,26 @@ def run_forward(config):
     graph, source = analyze(config)
     print(format_graph(graph, source.versions))
     report_missing(source)
+    return graph, source.versions
+
+
+def run_reverse(config):
+    """Строит и выводит граф обратных зависимостей."""
+    graph = analyze_reverse(config)
+    print(format_reverse(graph))
+    return graph, {}
+
+
+def visualize(graph, versions, args):
+    """Сохраняет граф в формате D2 и при необходимости показывает его."""
+    text = d2.to_d2(graph, versions, args.reverse)
+    default = f"{DEFAULT_OUT_DIR}/{graph.root}.d2"
+    path = d2.save_d2(text, args.d2 or default)
+    print(f"\nОписание на языке D2 ({path}):\n{text}", end="")
+    if args.show:
+        image = d2.render(path)
+        print(f"Изображение графа: {image}")
+        d2.show(image)
 
 
 def report_missing(source):
@@ -90,10 +117,10 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         config = config_from_args(args)
-        if args.reverse:
-            print(format_reverse(analyze_reverse(config)))
-        else:
-            run_forward(config)
+        runner = run_reverse if args.reverse else run_forward
+        graph, versions = runner(config)
+        if args.d2 or args.show:
+            visualize(graph, versions, args)
     except DepvizError as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         return EXIT_ERROR

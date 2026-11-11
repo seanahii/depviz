@@ -51,7 +51,7 @@ def build_graph(root, get_deps, is_excluded=None):
 
     def enter(node):
         """Добавляет вершину на путь и в стек обхода."""
-        deps = [dep for dep in get_deps(node) if not excluded(dep)]
+        deps = [dep for dep in get_deps(node) or [] if not excluded(dep)]
         graph.edges[node] = deps
         path.append(node)
         on_path.add(node)
