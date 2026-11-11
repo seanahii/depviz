@@ -4,6 +4,7 @@ import sys
 
 from depviz.config import MODE_REAL, make_config
 from depviz.errors import DepvizError
+from depviz.pypi import direct_requirements
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -36,10 +37,17 @@ def config_from_args(args):
                        args.pkg_version, args.substring)
 
 
-def print_config(config):
-    """Выводит параметры в формате ключ=значение."""
-    for key, value in config.as_pairs():
-        print(f"{key}={value}")
+def print_direct(config):
+    """Выводит прямые зависимости пакета из реального репозитория."""
+    if config.is_test:
+        raise DepvizError("тестовый режим пока не поддерживается")
+    version, requirements = direct_requirements(
+        config.repo, config.package, config.version)
+    print(f"Прямые зависимости {config.package}=={version}:")
+    for requirement in requirements:
+        print(f"  {requirement}")
+    if not requirements:
+        print("  (нет зависимостей)")
 
 
 def main(argv=None):
@@ -47,7 +55,7 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         config = config_from_args(args)
-        print_config(config)
+        print_direct(config)
     except DepvizError as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         return EXIT_ERROR

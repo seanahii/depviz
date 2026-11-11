@@ -9,7 +9,18 @@
 Python (pip). Готовые менеджеры пакетов и библиотеки для получения
 зависимостей не используются — только стандартная библиотека Python.
 
-Текущий этап: **1 — минимальный прототип с конфигурацией**.
+Текущий этап: **2 — сбор данных**.
+
+## Как получаются зависимости
+
+Данные берутся из JSON API репозитория PyPI:
+`<repo>/<пакет>/<версия>/json`, например
+`https://pypi.org/pypi/requests/2.31.0/json`. Из поля
+`info.requires_dist` (строки формата PEP 508) извлекаются имена
+зависимостей, ограничения версий и маркеры окружения. Зависимости
+с маркером `extra == "..."` — необязательные группы (`pip install
+pkg[extra]`) — не учитываются, так как pip не ставит их по умолчанию.
+Имена нормализуются по PEP 503 (`Foo_Bar` → `foo-bar`).
 
 ## Параметры (опции командной строки)
 
@@ -44,13 +55,22 @@ make test          # запуск тестов
 
 ## Примеры
 
+Прямые зависимости `requests` 2.31.0:
+
 ```text
-$ ./run.sh -p requests -r https://pypi.org/pypi -v 2.31.0 -f test
-package=requests
-repo=https://pypi.org/pypi
-mode=real
-version=2.31.0
-filter=test
+$ ./run.sh -p requests -r https://pypi.org/pypi -v 2.31.0
+Прямые зависимости requests==2.31.0:
+  charset-normalizer (<4,>=2)
+  idna (<4,>=2.5)
+  urllib3 (<3,>=1.21.1)
+  certifi (>=2017.4.17)
+```
+
+Ошибки:
+
+```text
+$ ./run.sh -p requests -r https://pypi.org/pypi -v 0.0.0
+Ошибка: не найдено в репозитории: https://pypi.org/pypi/requests/0.0.0/json
 
 $ ./run.sh -p requests -r pypi.org -v 2.31.0
 Ошибка: некорректный URL репозитория 'pypi.org', ожидается http(s)://хост/путь
