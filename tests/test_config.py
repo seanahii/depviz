@@ -1,5 +1,4 @@
 """Тесты проверки параметров."""
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,6 +6,8 @@ from depviz.config import make_config
 from depviz.errors import ConfigError
 
 PYPI = "https://pypi.org/pypi"
+REPO_FILE = (Path(__file__).resolve().parent.parent / "examples"
+             / "simple.txt")
 
 
 class RealModeTest(unittest.TestCase):
@@ -63,18 +64,10 @@ class RealModeTest(unittest.TestCase):
                 make_config("requests", PYPI, "real", "1.0", value)
 
 
-class TestModeTest(unittest.TestCase):
+class RepoFileModeTest(unittest.TestCase):
     """Проверка параметров для тестового репозитория."""
 
-    def setUp(self):
-        """Создаёт временный файл репозитория."""
-        self.tmp = tempfile.TemporaryDirectory()
-        self.path = Path(self.tmp.name) / "repo.txt"
-        self.path.write_text("A: B\n", encoding="utf-8")
-
-    def tearDown(self):
-        """Удаляет временный каталог."""
-        self.tmp.cleanup()
+    path = REPO_FILE
 
     def test_valid(self):
         """Корректные параметры принимаются, версия не обязательна."""

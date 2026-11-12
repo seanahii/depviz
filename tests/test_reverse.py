@@ -9,14 +9,11 @@ from depviz.cli import EXIT_ERROR, EXIT_OK
 from tests.test_cli import run
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
+SIMPLE = load_repo(EXAMPLES / "simple.txt")
 
 
 class ReverseTest(unittest.TestCase):
     """Поиск пакетов, зависящих от данного."""
-
-    def setUp(self):
-        """Загружает граф examples/simple.txt."""
-        self.repo = load_repo(EXAMPLES / "simple.txt")
 
     def test_invert(self):
         """Обращение графа."""
@@ -25,19 +22,19 @@ class ReverseTest(unittest.TestCase):
 
     def test_transitive(self):
         """От F зависят D напрямую и B, C, A транзитивно."""
-        graph = reverse_dependencies("F", self.repo)
+        graph = reverse_dependencies("F", SIMPLE)
         self.assertEqual(set(graph.edges) - {"F"}, {"D", "B", "C", "A"})
         self.assertEqual(graph.edges["D"], ["B", "C"])
 
     def test_root_package(self):
         """От корневого пакета никто не зависит."""
-        graph = reverse_dependencies("A", self.repo)
+        graph = reverse_dependencies("A", SIMPLE)
         self.assertEqual(graph.edges, {"A": []})
         self.assertIn("(нет)", format_reverse(graph))
 
     def test_filter(self):
         """Отфильтрованные пакеты не учитываются."""
-        graph = reverse_dependencies("D", self.repo, make_filter("C"))
+        graph = reverse_dependencies("D", SIMPLE, make_filter("C"))
         self.assertEqual(list(graph.edges), ["D", "B", "A"])
 
     def test_cycle(self):
